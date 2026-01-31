@@ -6,10 +6,11 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   Modal,
   Pressable,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCompanies } from '../context/CompanyContext';
 import { useInvoices } from '../context/InvoiceContext';
@@ -17,6 +18,7 @@ import { useMenu } from '../context/MenuContext';
 import { useTheme } from '../context/ThemeContext';
 import { FadeInView, SlideUpView } from '../components/AnimatedView';
 import { PageLoader } from '../components/Loader.jsx';
+import { toast } from '../utils/toast';
 
 export default function CreateInvoiceScreen({ navigation }) {
   const { companies, loading: companiesLoading } = useCompanies();
@@ -31,13 +33,28 @@ export default function CreateInvoiceScreen({ navigation }) {
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [dueDate, setDueDate] = useState('');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const [date, setDate] = useState(today);
+  const [dueDate, setDueDate] = useState(null);
   const [taxPercentage, setTaxPercentage] = useState('8');
   const [items, setItems] = useState([
     { name: '', qty: 1, rate: 0, amount: 0 },
   ]);
   const [showCompanyPicker, setShowCompanyPicker] = useState(false);
+  const [datePickerMode, setDatePickerMode] = useState(null); // 'date' | 'dueDate' | null
+
+  const formatDate = (d) => (d ? d.toISOString().slice(0, 10) : '');
+
+  const handleDateChange = (event, selectedDate) => {
+    if (Platform.OS === 'android') setDatePickerMode(null);
+    if (event.type === 'dismissed') return;
+    if (datePickerMode === 'date') {
+      setDate(selectedDate || date);
+    } else if (datePickerMode === 'dueDate') {
+      setDueDate(selectedDate || dueDate);
+    }
+  };
 
   const selectedCompany = companies.find((c) => c.id === companyId);
 
@@ -54,18 +71,18 @@ export default function CreateInvoiceScreen({ navigation }) {
     setItems(updated);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!companyId) {
-      Alert.alert('Required', 'Please select a company.');
+      toast.error('Please select a company.', 'Required');
       return;
     }
     if (!customerName.trim()) {
-      Alert.alert('Required', 'Please enter customer name.');
+      toast.error('Please enter customer name.', 'Required');
       return;
     }
     const validItems = items.filter((i) => i.name.trim());
     if (validItems.length === 0) {
-      Alert.alert('Required', 'Please add at least one item.');
+      toast.error('Please add at least one item.', 'Required');
       return;
     }
     const invoice = {
@@ -73,8 +90,8 @@ export default function CreateInvoiceScreen({ navigation }) {
       customerName: customerName.trim(),
       customerEmail: customerEmail.trim(),
       customerAddress: customerAddress.trim(),
-      date,
-      dueDate: dueDate || date,
+      date: formatDate(date),
+      dueDate: formatDate(dueDate || date),
       taxPercentage: parseFloat(taxPercentage) || 0,
       items: validItems.map((i) => ({
         name: i.name.trim(),
@@ -83,9 +100,13 @@ export default function CreateInvoiceScreen({ navigation }) {
         amount: (Number(i.qty) || 0) * (Number(i.rate) || 0),
       })),
     };
-    const created = addInvoice(invoice);
-    Alert.alert('Success', 'Invoice created.');
-    navigation.navigate('InvoiceDetail', { invoice: created });
+    try {
+      const created = await addInvoice(invoice);
+      toast.success('Invoice created.');
+      navigation.navigate('InvoiceDetail', { invoice: created });
+    } catch (e) {
+      toast.error(e.data?.error || e.message || 'Failed to create invoice.');
+    }
   };
 
   return (
@@ -114,21 +135,21 @@ export default function CreateInvoiceScreen({ navigation }) {
         keyboardShouldPersistTaps="handled"
       >
         <SlideUpView delay={100} style={styles.section}>
-          <Text style={styles.label}>Company</Text>
+          <Text style={[styles.label, { color: theme.textHint }]}>Company</Text>
           <TouchableOpacity
-            style={styles.picker}
+            style={[styles.picker, { backgroundColor: theme.inputBg, borderColor: theme.border }]}
             onPress={() => setShowCompanyPicker(true)}
           >
-            <Text style={styles.pickerText}>
+            <Text style={[styles.pickerText, { color: theme.text }]}>
               {selectedCompany?.name || 'Select company'}
             </Text>
           </TouchableOpacity>
         </SlideUpView>
 
         <SlideUpView delay={150} style={styles.section}>
-          <Text style={styles.label}>Customer Name *</Text>
+          <Text style={[styles.label, { color: theme.textHint }]}>Customer Name *</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
             value={customerName}
             onChangeText={setCustomerName}
             placeholder="Customer name"
@@ -137,9 +158,9 @@ export default function CreateInvoiceScreen({ navigation }) {
         </SlideUpView>
 
         <SlideUpView delay={200} style={styles.section}>
-          <Text style={styles.label}>Customer Email</Text>
+          <Text style={[styles.label, { color: theme.textHint }]}>Customer Email</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
             value={customerEmail}
             onChangeText={setCustomerEmail}
             placeholder="email@example.com"
@@ -149,9 +170,9 @@ export default function CreateInvoiceScreen({ navigation }) {
         </SlideUpView>
 
         <SlideUpView delay={250} style={styles.section}>
-          <Text style={styles.label}>Customer Address</Text>
+          <Text style={[styles.label, { color: theme.textHint }]}>Customer Address</Text>
           <TextInput
-            style={[styles.input, styles.textArea]}
+            style={[styles.input, styles.textArea, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
             value={customerAddress}
             onChangeText={setCustomerAddress}
             placeholder="Address"
@@ -162,31 +183,68 @@ export default function CreateInvoiceScreen({ navigation }) {
 
         <SlideUpView delay={300} style={styles.row}>
           <View style={styles.rowItem}>
-            <Text style={styles.label}>Date</Text>
-            <TextInput
-              style={styles.input}
-              value={date}
-              onChangeText={setDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={theme.textMuted}
-            />
+            <Text style={[styles.label, { color: theme.textHint }]}>Date</Text>
+            <TouchableOpacity
+              style={[styles.picker, styles.pickerRow, { backgroundColor: theme.inputBg, borderColor: theme.border }]}
+              onPress={() => setDatePickerMode('date')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.pickerText, { color: theme.text }]}>
+                {formatDate(date)}
+              </Text>
+              <Text style={styles.pickerIcon}>📅</Text>
+            </TouchableOpacity>
           </View>
           <View style={styles.rowItem}>
-            <Text style={styles.label}>Due Date</Text>
-            <TextInput
-              style={styles.input}
-              value={dueDate}
-              onChangeText={setDueDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={theme.textMuted}
-            />
+            <Text style={[styles.label, { color: theme.textHint }]}>Due Date</Text>
+            <TouchableOpacity
+              style={[styles.picker, styles.pickerRow, { backgroundColor: theme.inputBg, borderColor: theme.border }]}
+              onPress={() => setDatePickerMode('dueDate')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.pickerText, { color: dueDate ? theme.text : theme.textMuted }]}>
+                {formatDate(dueDate) || 'Select due date'}
+              </Text>
+              <Text style={styles.pickerIcon}>📅</Text>
+            </TouchableOpacity>
           </View>
         </SlideUpView>
 
+        {datePickerMode && (
+          Platform.OS === 'ios' ? (
+            <Modal visible transparent animationType="slide">
+              <Pressable style={styles.datePickerOverlay} onPress={() => setDatePickerMode(null)}>
+                <Pressable style={[styles.datePickerModal, { backgroundColor: theme.dialogBg }]} onPress={() => {}}>
+                  <View style={[styles.datePickerHeader, { borderBottomColor: theme.border }]}>
+                    <TouchableOpacity onPress={() => setDatePickerMode(null)}>
+                      <Text style={[styles.datePickerDone, { color: theme.accent }]}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker
+                    value={datePickerMode === 'date' ? date : (dueDate || date)}
+                    mode="date"
+                    display="spinner"
+                    onChange={handleDateChange}
+                    minimumDate={datePickerMode === 'dueDate' ? date : undefined}
+                  />
+                </Pressable>
+              </Pressable>
+            </Modal>
+          ) : (
+            <DateTimePicker
+              value={datePickerMode === 'date' ? date : (dueDate || date)}
+              mode="date"
+              display="default"
+              onChange={handleDateChange}
+              minimumDate={datePickerMode === 'dueDate' ? date : undefined}
+            />
+          )
+        )}
+
         <SlideUpView delay={350} style={styles.section}>
-          <Text style={styles.label}>Tax %</Text>
+          <Text style={[styles.label, { color: theme.textHint }]}>Tax %</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
             value={taxPercentage}
             onChangeText={setTaxPercentage}
             placeholder="8"
@@ -197,22 +255,22 @@ export default function CreateInvoiceScreen({ navigation }) {
 
         <SlideUpView delay={400} style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.label}>Items</Text>
+            <Text style={[styles.label, { color: theme.textHint }]}>Items</Text>
             <TouchableOpacity onPress={addItem}>
-              <Text style={styles.addItem}>+ Add</Text>
+              <Text style={[styles.addItem, { color: theme.accent }]}>+ Add</Text>
             </TouchableOpacity>
           </View>
           {items.map((item, i) => (
             <View key={i} style={styles.itemRow}>
               <TextInput
-                style={[styles.input, styles.itemName]}
+                style={[styles.input, styles.itemName, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
                 value={item.name}
                 onChangeText={(v) => updateItem(i, 'name', v)}
                 placeholder="Description"
                 placeholderTextColor={theme.textMuted}
               />
               <TextInput
-                style={[styles.input, styles.itemQty]}
+                style={[styles.input, styles.itemQty, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
                 value={String(item.qty)}
                 onChangeText={(v) => updateItem(i, 'qty', v)}
                 placeholder="Qty"
@@ -220,7 +278,7 @@ export default function CreateInvoiceScreen({ navigation }) {
                 keyboardType="number-pad"
               />
               <TextInput
-                style={[styles.input, styles.itemRate]}
+                style={[styles.input, styles.itemRate, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
                 value={String(item.rate)}
                 onChangeText={(v) => updateItem(i, 'rate', v)}
                 placeholder="Rate (₹)"
@@ -248,25 +306,25 @@ export default function CreateInvoiceScreen({ navigation }) {
           style={styles.modalOverlay}
           onPress={() => setShowCompanyPicker(false)}
         >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Company</Text>
+          <View style={[styles.modalContent, { backgroundColor: theme.dialogBg }]} onStartShouldSetResponder={() => true}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Select Company</Text>
             {companies.map((c) => (
               <TouchableOpacity
                 key={c.id}
-                style={styles.modalItem}
+                style={[styles.modalItem, { borderBottomColor: theme.border }]}
                 onPress={() => {
                   setCompanyId(c.id);
                   setShowCompanyPicker(false);
                 }}
               >
-                <Text style={styles.modalItemText}>{c.name}</Text>
+                <Text style={[styles.modalItemText, { color: theme.text }]}>{c.name}</Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity
-              style={styles.modalClose}
+              style={[styles.modalClose, { borderTopColor: theme.border }]}
               onPress={() => setShowCompanyPicker(false)}
             >
-              <Text style={styles.modalCloseText}>Cancel</Text>
+              <Text style={[styles.modalCloseText, { color: theme.accent }]}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -288,13 +346,11 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.08)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   menuIcon: {
     fontSize: 22,
-    color: '#fff',
     fontWeight: '600',
   },
   backBtnWrap: {
@@ -302,13 +358,11 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     fontSize: 16,
-    color: '#e94560',
   },
   title: {
     flex: 1,
     fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
     marginLeft: 12,
   },
   scroll: { flex: 1 },
@@ -322,35 +376,55 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    color: '#94a3b8',
     textTransform: 'uppercase',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 6,
+    borderRadius: 8,
     padding: 14,
     fontSize: 16,
-    color: '#fff',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   textArea: { minHeight: 60 },
   row: { flexDirection: 'row', gap: 12, marginBottom: 16 },
   rowItem: { flex: 1 },
   picker: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 6,
+    borderRadius: 8,
     padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  pickerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   pickerText: {
-    color: '#fff',
     fontSize: 16,
   },
+  pickerIcon: {
+    fontSize: 18,
+  },
+  datePickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  datePickerModal: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 40,
+  },
+  datePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  datePickerDone: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
   addItem: {
-    color: '#e94560',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -376,37 +450,33 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#1e1e2e',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     padding: 24,
     paddingBottom: 40,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fff',
     marginBottom: 16,
   },
   modalItem: {
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   modalItemText: {
-    color: '#fff',
     fontSize: 16,
   },
   modalClose: {
     marginTop: 16,
     alignItems: 'center',
+    borderTopWidth: 1,
   },
   modalCloseText: {
-    color: '#e94560',
     fontSize: 16,
     fontWeight: '600',
   },

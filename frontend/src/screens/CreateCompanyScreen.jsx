@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   Image,
   Platform,
 } from 'react-native';
@@ -17,6 +16,7 @@ import { useCompanies } from '../context/CompanyContext';
 import { useMenu } from '../context/MenuContext';
 import { useTheme } from '../context/ThemeContext';
 import { FadeInView, SlideUpView } from '../components/AnimatedView';
+import { toast } from '../utils/toast';
 
 export default function CreateCompanyScreen({ route, navigation }) {
   const { company: editCompany, edit } = route.params || {};
@@ -37,7 +37,7 @@ export default function CreateCompanyScreen({ route, navigation }) {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow access to your photo library.');
+      toast.error('Please allow access to your photo library.', 'Permission needed');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -51,9 +51,9 @@ export default function CreateCompanyScreen({ route, navigation }) {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Required', 'Company name is required.');
+      toast.error('Company name is required.', 'Required');
       return;
     }
     const data = {
@@ -65,21 +65,30 @@ export default function CreateCompanyScreen({ route, navigation }) {
       email: email.trim() || undefined,
       logo: logo || null,
     };
-    if (edit && editCompany?.id) {
-      updateCompany(editCompany.id, data);
-      Alert.alert('Success', 'Company updated.');
-    } else {
-      addCompany(data);
-      Alert.alert('Success', 'Company created.');
+    try {
+      if (edit && editCompany?.id) {
+        await updateCompany(editCompany.id, data);
+        toast.success('Company updated.');
+      } else {
+        await addCompany(data);
+        toast.success('Company created.');
+      }
+      navigation.goBack();
+    } catch (err) {
+      toast.error(err.data?.error || err.message || 'Failed to save company.');
     }
-    navigation.goBack();
   };
 
-  const handleDeleteCompany = () => {
+  const handleDeleteCompany = async () => {
     setDeleteDialogVisible(false);
     if (edit && editCompany?.id) {
-      deleteCompany(editCompany.id);
-      navigation.goBack();
+      try {
+        await deleteCompany(editCompany.id);
+        toast.success('Company deleted.');
+        navigation.goBack();
+      } catch (err) {
+        toast.error(err.data?.error || err.message || 'Failed to delete company.');
+      }
     }
   };
 
@@ -108,22 +117,22 @@ export default function CreateCompanyScreen({ route, navigation }) {
         keyboardShouldPersistTaps="handled"
       >
         <SlideUpView delay={100} style={styles.section}>
-          <Text style={styles.label}>Company Logo (optional)</Text>
+          <Text style={[styles.label, { color: theme.textHint }]}>Company Logo (optional)</Text>
           <TouchableOpacity style={styles.logoBtn} onPress={pickImage}>
             {logo ? (
               <Image source={{ uri: logo }} style={styles.logoPreview} />
             ) : (
-              <View style={styles.logoPlaceholder}>
-                <Text style={styles.logoPlaceholderText}>+ Add Logo</Text>
+              <View style={[styles.logoPlaceholder, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+                <Text style={[styles.logoPlaceholderText, { color: theme.textHint }]}>+ Add Logo</Text>
               </View>
             )}
           </TouchableOpacity>
         </SlideUpView>
 
         <SlideUpView delay={150} style={styles.section}>
-          <Text style={styles.label}>Company Name *</Text>
+          <Text style={[styles.label, { color: theme.textHint }]}>Company Name *</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
             value={name}
             onChangeText={setName}
             placeholder="Enter company name"
@@ -132,9 +141,9 @@ export default function CreateCompanyScreen({ route, navigation }) {
         </SlideUpView>
 
         <SlideUpView delay={200} style={styles.section}>
-          <Text style={styles.label}>GSTIN (optional)</Text>
+          <Text style={[styles.label, { color: theme.textHint }]}>GSTIN (optional)</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
             value={gstin}
             onChangeText={setGstin}
             placeholder="e.g. 29AABCU9603R1ZM"
@@ -143,9 +152,9 @@ export default function CreateCompanyScreen({ route, navigation }) {
         </SlideUpView>
 
         <SlideUpView delay={250} style={styles.section}>
-          <Text style={styles.label}>Website (optional)</Text>
+          <Text style={[styles.label, { color: theme.textHint }]}>Website (optional)</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
             value={website}
             onChangeText={setWebsite}
             placeholder="www.example.com"
@@ -155,9 +164,9 @@ export default function CreateCompanyScreen({ route, navigation }) {
         </SlideUpView>
 
         <SlideUpView delay={300} style={styles.section}>
-          <Text style={styles.label}>Address</Text>
+          <Text style={[styles.label, { color: theme.textHint }]}>Address</Text>
           <TextInput
-            style={[styles.input, styles.textArea]}
+            style={[styles.input, styles.textArea, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
             value={address}
             onChangeText={setAddress}
             placeholder="Full address"
@@ -168,9 +177,9 @@ export default function CreateCompanyScreen({ route, navigation }) {
         </SlideUpView>
 
         <SlideUpView delay={350} style={styles.section}>
-          <Text style={styles.label}>Mobile Number</Text>
+          <Text style={[styles.label, { color: theme.textHint }]}>Mobile Number</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
             value={mobile}
             onChangeText={setMobile}
             placeholder="+1 (555) 123-4567"
@@ -180,9 +189,9 @@ export default function CreateCompanyScreen({ route, navigation }) {
         </SlideUpView>
 
         <SlideUpView delay={400} style={styles.section}>
-          <Text style={styles.label}>Email Address</Text>
+          <Text style={[styles.label, { color: theme.textHint }]}>Email Address</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
             value={email}
             onChangeText={setEmail}
             placeholder="billing@company.com"
@@ -240,13 +249,11 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.08)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   menuIcon: {
     fontSize: 22,
-    color: '#fff',
     fontWeight: '600',
   },
   backBtnWrap: {
@@ -254,13 +261,11 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     fontSize: 16,
-    color: '#e94560',
   },
   title: {
     flex: 1,
     fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
     marginLeft: 12,
   },
   scroll: { flex: 1 },
@@ -268,18 +273,14 @@ const styles = StyleSheet.create({
   section: { marginBottom: 20 },
   label: {
     fontSize: 12,
-    color: '#94a3b8',
     textTransform: 'uppercase',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 6,
+    borderRadius: 8,
     padding: 16,
     fontSize: 16,
-    color: '#fff',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   textArea: {
     minHeight: 80,
@@ -297,15 +298,12 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 6,
-    backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.2)',
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
   },
   logoPlaceholderText: {
-    color: '#94a3b8',
     fontSize: 14,
   },
   saveBtn: {

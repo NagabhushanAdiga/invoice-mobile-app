@@ -139,7 +139,7 @@ function stylishTemplate(invoice, company) {
         <div class="grand-total"><span>Total</span><span>₹${invoice.total.toLocaleString('en-IN')}</span></div>
       </div>
     </div>
-    <div class="footer">Thank you for your business · Easy Invoice</div>
+    <div class="footer">Thank you for your business${company.name ? ` · ${company.name}` : ''}</div>
   </div>
 </body>
 </html>

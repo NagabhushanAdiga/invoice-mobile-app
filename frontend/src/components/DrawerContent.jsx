@@ -79,7 +79,7 @@ export default function DrawerContent(props) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#0c0c14',
+    backgroundColor: '#ffffff',
   },
   content: {
     paddingTop: 56,
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 24,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: 'rgba(0,0,0,0.08)',
     marginBottom: 16,
   },
   logo: {
@@ -113,12 +113,12 @@ const styles = StyleSheet.create({
   },
   menuText: {
     fontSize: 16,
-    color: '#e2e8f0',
+    color: '#0f172a',
     fontWeight: '500',
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.08)',
     marginVertical: 16,
     marginHorizontal: 24,
   },

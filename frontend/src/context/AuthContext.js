@@ -1,15 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as authService from '../services/authService';
+import { getToken, setToken } from '../services/api';
 
 const AuthContext = createContext(null);
-const USERS_KEY = 'invoice_app_users';
-const CURRENT_USER_KEY = 'invoice_app_user';
-
-const DEMO_USER = {
-  email: 'user@invoice.com',
-  password: 'password123',
-  name: 'John Doe',
-};
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -21,70 +14,66 @@ export function AuthProvider({ children }) {
 
   const checkAuth = async () => {
     try {
-      const stored = await AsyncStorage.getItem(CURRENT_USER_KEY);
-      if (stored) setUser(JSON.parse(stored));
+      const token = await getToken();
+      if (!token) {
+        setUser(null);
+        return;
+      }
+      const userData = await authService.getMe();
+      setUser(userData);
     } catch (e) {
-      console.warn(e);
+      await setToken(null);
+      setUser(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const findUser = async (email, password) => {
-    if (email === DEMO_USER.email && password === DEMO_USER.password) {
-      return { email, name: DEMO_USER.name };
-    }
-    try {
-      const stored = await AsyncStorage.getItem(USERS_KEY);
-      const users = stored ? JSON.parse(stored) : [];
-      const found = users.find(
-        (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-      );
-      return found ? { email: found.email, name: found.name } : null;
-    } catch (e) {
-      return null;
-    }
-  };
-
   const login = async (email, password) => {
-    const userData = await findUser(email, password);
-    if (userData) {
-      setUser(userData);
-      await AsyncStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData));
-      return { success: true };
+    try {
+      const result = await authService.login(email, password);
+      if (result.success) {
+        setUser(result.user);
+        return { success: true };
+      }
+      return { success: false, error: result.error };
+    } catch (e) {
+      return { success: false, error: e.data?.error || e.message || 'Login failed' };
     }
-    return { success: false, error: 'Invalid email or password' };
   };
 
   const register = async (name, email, password) => {
     try {
-      const stored = await AsyncStorage.getItem(USERS_KEY);
-      const users = stored ? JSON.parse(stored) : [];
-      const exists = users.some(
-        (u) => u.email.toLowerCase() === email.toLowerCase()
-      );
-      if (exists) {
-        return { success: false, error: 'Email already registered' };
+      const result = await authService.register(name, email, password);
+      if (result.success) {
+        setUser(result.user);
+        return { success: true };
       }
-      const newUser = { name: name.trim(), email: email.trim().toLowerCase(), password };
-      users.push(newUser);
-      await AsyncStorage.setItem(USERS_KEY, JSON.stringify(users));
-      const userData = { email: newUser.email, name: newUser.name };
-      setUser(userData);
-      await AsyncStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData));
-      return { success: true };
+      return { success: false, error: result.error };
     } catch (e) {
-      return { success: false, error: e.message || 'Registration failed' };
+      return { success: false, error: e.data?.error || e.message || 'Registration failed' };
     }
   };
 
   const logout = async () => {
     setUser(null);
-    await AsyncStorage.removeItem(CURRENT_USER_KEY);
+    await setToken(null);
+  };
+
+  const changePassword = async (currentPassword, newPassword) => {
+    try {
+      const result = await authService.changePassword(currentPassword, newPassword);
+      if (result.success) {
+        return { success: true };
+      }
+      return { success: false, error: result.error };
+    } catch (e) {
+      return { success: false, error: e.data?.error || e.message || 'Failed to change password' };
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, changePassword }}>
       {children}
     </AuthContext.Provider>
   );

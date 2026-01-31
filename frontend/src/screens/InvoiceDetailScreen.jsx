@@ -11,7 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { COMPANY_INFO } from '../data/invoices';
+import { EMPTY_COMPANY_INFO } from '../data/invoices';
 import { useCompanies } from '../context/CompanyContext';
 import { useInvoices } from '../context/InvoiceContext';
 import { useMenu } from '../context/MenuContext';
@@ -20,20 +20,29 @@ import { getTemplateHtml } from '../templates/invoicePdfTemplates';
 import { FadeInView, SlideUpView } from '../components/AnimatedView';
 import { ButtonLoader } from '../components/Loader.jsx';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { toast } from '../utils/toast';
 
 export default function InvoiceDetailScreen({ route, navigation }) {
-  const { invoice } = route.params;
   const { getCompanyById, toCompanyInfo } = useCompanies();
-  const { deleteInvoice } = useInvoices();
+  const { getInvoiceById, deleteInvoice, markAsPaid } = useInvoices();
   const { openMenu } = useMenu();
   const { theme } = useTheme();
+  const invoice = getInvoiceById(route.params?.invoice?.id) || route.params?.invoice;
   const [downloading, setDownloading] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState(false);
   const [viewModalVisible, setViewModalVisible] = useState(false);
   const [messageDialog, setMessageDialog] = useState({ visible: false, title: '', message: '', variant: 'success' });
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+  const [markPaidDialogVisible, setMarkPaidDialogVisible] = useState(false);
+
+  const canMarkAsPaid = invoice && invoice.status !== 'Paid';
+
+  if (!invoice) {
+    return null;
+  }
 
   const company = invoice.companyId ? getCompanyById(invoice.companyId) : null;
-  const companyInfo = company ? toCompanyInfo(company) : COMPANY_INFO;
+  const companyInfo = company ? toCompanyInfo(company) : EMPTY_COMPANY_INFO;
 
   const generatePdf = async () => {
     const html = getTemplateHtml('stylish', invoice, companyInfo);
@@ -83,10 +92,28 @@ export default function InvoiceDetailScreen({ route, navigation }) {
     }
   };
 
-  const handleDeleteInvoice = () => {
+  const handleDeleteInvoice = async () => {
     setDeleteDialogVisible(false);
-    deleteInvoice(invoice.id);
-    navigation.goBack();
+    try {
+      await deleteInvoice(invoice.id);
+      toast.success('Invoice deleted.');
+      navigation.goBack();
+    } catch (e) {
+      toast.error(e.data?.error || e.message || 'Failed to delete invoice.');
+    }
+  };
+
+  const handleMarkAsPaid = async () => {
+    setMarkPaidDialogVisible(false);
+    setMarkingPaid(true);
+    try {
+      await markAsPaid(invoice.id);
+      toast.success('Invoice marked as paid.');
+    } catch (e) {
+      toast.error(e.data?.error || e.message || 'Failed to mark as paid.');
+    } finally {
+      setMarkingPaid(false);
+    }
   };
 
   return (
@@ -107,7 +134,7 @@ export default function InvoiceDetailScreen({ route, navigation }) {
         </TouchableOpacity>
         <Text style={[styles.title, { color: theme.text }]}>{invoice.id}</Text>
         <View style={[styles.badge, styles[`badge_${invoice.status}`]]}>
-          <Text style={styles.badgeText}>{invoice.status}</Text>
+          <Text style={[styles.badgeText, { color: theme.text }]}>{invoice.status}</Text>
         </View>
       </FadeInView>
 
@@ -116,55 +143,72 @@ export default function InvoiceDetailScreen({ route, navigation }) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <SlideUpView delay={100} style={styles.card}>
-          <Text style={styles.cardLabel}>Customer</Text>
-          <Text style={styles.cardValue}>{invoice.customerName}</Text>
-          <Text style={styles.cardSub}>{invoice.customerEmail}</Text>
-          <Text style={styles.cardSub}>{invoice.customerAddress}</Text>
+        <SlideUpView delay={100} style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <Text style={[styles.cardLabel, { color: theme.textHint }]}>Customer</Text>
+          <Text style={[styles.cardValue, { color: theme.text }]}>{invoice.customerName}</Text>
+          <Text style={[styles.cardSub, { color: theme.textSecondary }]}>{invoice.customerEmail}</Text>
+          <Text style={[styles.cardSub, { color: theme.textSecondary }]}>{invoice.customerAddress}</Text>
         </SlideUpView>
 
         <SlideUpView delay={150} style={styles.row}>
-          <View style={styles.rowItem}>
-            <Text style={styles.cardLabel}>Date</Text>
-            <Text style={styles.cardValue}>{invoice.date}</Text>
+          <View style={[styles.rowItem, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.cardLabel, { color: theme.textHint }]}>Date</Text>
+            <Text style={[styles.cardValue, { color: theme.text }]}>{invoice.date}</Text>
           </View>
-          <View style={styles.rowItem}>
-            <Text style={styles.cardLabel}>Due Date</Text>
-            <Text style={styles.cardValue}>{invoice.dueDate}</Text>
+          <View style={[styles.rowItem, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.cardLabel, { color: theme.textHint }]}>Due Date</Text>
+            <Text style={[styles.cardValue, { color: theme.text }]}>{invoice.dueDate}</Text>
           </View>
         </SlideUpView>
 
-        <SlideUpView delay={200} style={styles.card}>
-          <Text style={styles.cardLabel}>Items</Text>
+        <SlideUpView delay={200} style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <Text style={[styles.cardLabel, { color: theme.textHint }]}>Items</Text>
           {invoice.items.map((item, i) => (
-            <View key={i} style={styles.itemRow}>
-              <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemAmount}>₹{item.amount.toLocaleString('en-IN')}</Text>
+            <View key={i} style={[styles.itemRow, { borderBottomColor: theme.borderLight }]}>
+              <Text style={[styles.itemName, { color: theme.text }]}>{item.name}</Text>
+              <Text style={[styles.itemAmount, { color: theme.text }]}>₹{item.amount.toLocaleString('en-IN')}</Text>
             </View>
           ))}
         </SlideUpView>
 
-        <SlideUpView delay={250} style={styles.totalsCard}>
+        <SlideUpView delay={250} style={[styles.totalsCard, { backgroundColor: theme.accentMuted, borderColor: theme.accent }]}>
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Subtotal</Text>
-            <Text style={styles.totalValue}>₹{invoice.subtotal.toLocaleString('en-IN')}</Text>
+            <Text style={[styles.totalLabel, { color: theme.textSecondary }]}>Subtotal</Text>
+            <Text style={[styles.totalValue, { color: theme.text }]}>₹{invoice.subtotal.toLocaleString('en-IN')}</Text>
           </View>
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Tax</Text>
-            <Text style={styles.totalValue}>₹{invoice.tax.toLocaleString('en-IN')}</Text>
+            <Text style={[styles.totalLabel, { color: theme.textSecondary }]}>Tax</Text>
+            <Text style={[styles.totalValue, { color: theme.text }]}>₹{invoice.tax.toLocaleString('en-IN')}</Text>
           </View>
-          <View style={[styles.totalRow, styles.grandTotal]}>
-            <Text style={styles.grandTotalLabel}>Total</Text>
-            <Text style={styles.grandTotalValue}>₹{invoice.total.toLocaleString('en-IN')}</Text>
+          <View style={[styles.totalRow, styles.grandTotal, { borderTopColor: theme.border }]}>
+            <Text style={[styles.grandTotalLabel, { color: theme.text }]}>Total</Text>
+            <Text style={[styles.grandTotalValue, { color: theme.accent }]}>₹{invoice.total.toLocaleString('en-IN')}</Text>
           </View>
         </SlideUpView>
 
         <SlideUpView delay={280} style={styles.actionButtons}>
+          {canMarkAsPaid && (
+            <TouchableOpacity
+              style={[styles.markPaidBtn, { backgroundColor: theme.success }]}
+              onPress={() => setMarkPaidDialogVisible(true)}
+              disabled={markingPaid}
+              activeOpacity={0.8}
+            >
+              {markingPaid ? (
+                <View style={styles.downloadBtnContent}>
+                  <ButtonLoader size="small" />
+                  <Text style={styles.markPaidBtnText}>Updating...</Text>
+                </View>
+              ) : (
+                <Text style={styles.markPaidBtnText}>✓ Mark as Paid</Text>
+              )}
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
-            style={styles.viewBtn}
+            style={[styles.viewBtn, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}
             onPress={() => setViewModalVisible(true)}
           >
-            <Text style={styles.viewBtnText}>View Invoice</Text>
+            <Text style={[styles.viewBtnText, { color: theme.text }]}>View Invoice</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.downloadBtn, downloading && styles.downloadBtnDisabled]}
@@ -214,14 +258,14 @@ export default function InvoiceDetailScreen({ route, navigation }) {
           onRequestClose={() => setViewModalVisible(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Invoice Preview</Text>
+            <View style={[styles.modalContent, { backgroundColor: theme.dialogBg }]}>
+              <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
+                <Text style={[styles.modalTitle, { color: theme.text }]}>Invoice Preview</Text>
                 <Pressable
                   onPress={() => setViewModalVisible(false)}
                   style={styles.modalClose}
                 >
-                  <Text style={styles.modalCloseText}>✕ Close</Text>
+                  <Text style={[styles.modalCloseText, { color: theme.accent }]}>✕ Close</Text>
                 </Pressable>
               </View>
               <ScrollView
@@ -293,7 +337,7 @@ export default function InvoiceDetailScreen({ route, navigation }) {
                     </View>
                   </View>
                   <View style={styles.previewFooter}>
-                    <Text style={styles.previewFooterText}>Thank you for your business · Easy Invoice</Text>
+                    <Text style={styles.previewFooterText}>Thank you for your business{companyInfo.name ? ` · ${companyInfo.name}` : ''}</Text>
                   </View>
                 </View>
               </ScrollView>
@@ -345,6 +389,16 @@ export default function InvoiceDetailScreen({ route, navigation }) {
           onConfirm={handleDeleteInvoice}
           onCancel={() => setDeleteDialogVisible(false)}
         />
+        <ConfirmDialog
+          visible={markPaidDialogVisible}
+          title="Mark as Paid"
+          message={`Are you sure you want to mark invoice ${invoice.id} as paid?`}
+          confirmText="Mark as Paid"
+          cancelText="Cancel"
+          variant="success"
+          onConfirm={handleMarkAsPaid}
+          onCancel={() => setMarkPaidDialogVisible(false)}
+        />
       </ScrollView>
     </LinearGradient>
   );
@@ -365,13 +419,11 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.08)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   menuIcon: {
     fontSize: 22,
-    color: '#fff',
     fontWeight: '600',
   },
   backBtnWrap: {
@@ -379,13 +431,11 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     fontSize: 16,
-    color: '#e94560',
   },
   title: {
     flex: 1,
     fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
     marginLeft: 12,
   },
   badge: {
@@ -395,13 +445,12 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginTop: 8,
   },
-  badge_Paid: { backgroundColor: 'rgba(16, 185, 129, 0.3)' },
-  badge_Pending: { backgroundColor: 'rgba(245, 158, 11, 0.3)' },
-  badge_Overdue: { backgroundColor: 'rgba(239, 68, 68, 0.3)' },
+  badge_Paid: { backgroundColor: 'rgba(34, 197, 94, 0.15)' },
+  badge_Pending: { backgroundColor: 'rgba(245, 158, 11, 0.2)' },
+  badge_Overdue: { backgroundColor: 'rgba(239, 68, 68, 0.15)' },
   badgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#fff',
   },
   scroll: {
     flex: 1,
@@ -411,27 +460,22 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 6,
+    borderRadius: 8,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
   },
   cardLabel: {
     fontSize: 12,
-    color: '#8892b0',
     textTransform: 'uppercase',
     marginBottom: 4,
   },
   cardValue: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
   },
   cardSub: {
     fontSize: 14,
-    color: '#8892b0',
     marginTop: 4,
   },
   row: {
@@ -441,36 +485,29 @@ const styles = StyleSheet.create({
   },
   rowItem: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 6,
+    borderRadius: 8,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
   },
   itemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
   },
   itemName: {
     fontSize: 14,
-    color: '#fff',
     flex: 1,
   },
   itemAmount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
   },
   totalsCard: {
-    backgroundColor: 'rgba(233, 69, 96, 0.15)',
-    borderRadius: 6,
+    borderRadius: 8,
     padding: 20,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: 'rgba(233, 69, 96, 0.3)',
   },
   totalRow: {
     flexDirection: 'row',
@@ -479,41 +516,43 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 16,
-    color: '#8892b0',
   },
   totalValue: {
     fontSize: 16,
-    color: '#fff',
   },
   grandTotal: {
     marginTop: 8,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.2)',
   },
   grandTotalLabel: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
   },
   grandTotalValue: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#e94560',
   },
   actionButtons: {
     gap: 12,
   },
   viewBtn: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
   },
   viewBtnText: {
-    color: '#e2e8f0',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  markPaidBtn: {
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+  },
+  markPaidBtnText: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -575,9 +614,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#1e1e2e',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     maxHeight: '90%',
   },
   modalHeader: {
@@ -586,18 +624,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fff',
   },
   modalClose: {
     padding: 8,
   },
   modalCloseText: {
-    color: '#e94560',
     fontSize: 16,
     fontWeight: '600',
   },

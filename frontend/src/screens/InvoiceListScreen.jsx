@@ -57,7 +57,7 @@ export default function InvoiceListScreen({ navigation }) {
           >
             <View style={styles.cardHeader}>
               <Text style={[styles.invoiceId, { color: colors.accent }]}>{item.id}</Text>
-              <View style={[styles.badge, { backgroundColor: `${colors.gradient[0]}50` }]}>
+              <View style={[styles.badge, { backgroundColor: `${colors.gradient[0]}30` }]}>
                 <Text style={[styles.badgeText, { color: colors.accent }]}>{item.status}</Text>
               </View>
             </View>

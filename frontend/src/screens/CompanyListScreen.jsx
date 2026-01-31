@@ -40,7 +40,7 @@ export default function CompanyListScreen({ navigation }) {
   const renderItem = ({ item, index }) => (
     <SlideInItem index={index}>
       <TouchableOpacity
-        style={styles.card}
+        style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
         onPress={() => navigation.navigate('CreateCompany', { company: item, edit: true })}
         activeOpacity={0.9}
       >
@@ -48,15 +48,15 @@ export default function CompanyListScreen({ navigation }) {
           {item.logo ? (
             <Image source={{ uri: item.logo }} style={styles.logo} />
           ) : (
-            <View style={styles.logoPlaceholder}>
-              <Text style={styles.logoText}>{item.name?.charAt(0) || '?'}</Text>
+            <View style={[styles.logoPlaceholder, { backgroundColor: theme.accentMuted }]}>
+              <Text style={[styles.logoText, { color: theme.accent }]}>{item.name?.charAt(0) || '?'}</Text>
             </View>
           )}
           <View style={styles.cardContent}>
             <Text style={[styles.companyName, { color: theme.text }]}>{item.name}</Text>
             <Text style={[styles.companyDetail, { color: theme.textHint }]}>{item.email}</Text>
             {item.gstin ? (
-              <Text style={styles.companyGstin}>GSTIN: {item.gstin}</Text>
+              <Text style={[styles.companyGstin, { color: theme.textSecondary }]}>GSTIN: {item.gstin}</Text>
             ) : null}
           </View>
         </View>
@@ -133,13 +133,11 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.08)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   menuIcon: {
     fontSize: 22,
-    color: '#fff',
     fontWeight: '600',
   },
   headerCenter: {
@@ -149,23 +147,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#fff',
   },
   subtitle: {
     fontSize: 14,
-    color: '#8892b0',
     marginTop: 4,
   },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
     borderRadius: 8,
     marginHorizontal: 24,
     marginBottom: 20,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
   },
   searchIcon: {
     fontSize: 18,
@@ -175,19 +169,16 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#fff',
   },
   list: {
     paddingHorizontal: 24,
     paddingBottom: 100,
   },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 6,
+    borderRadius: 8,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
   },
   cardRow: {
     flexDirection: 'row',
@@ -202,14 +193,12 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 6,
-    backgroundColor: 'rgba(233, 69, 96, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   logoText: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#e94560',
   },
   cardContent: {
     flex: 1,
@@ -227,11 +216,9 @@ const styles = StyleSheet.create({
   },
   companyGstin: {
     fontSize: 12,
-    color: '#94a3b8',
     marginTop: 4,
   },
   empty: {
-    color: '#8892b0',
     textAlign: 'center',
     marginTop: 48,
     fontSize: 16,

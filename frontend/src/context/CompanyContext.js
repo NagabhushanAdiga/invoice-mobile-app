@@ -1,66 +1,63 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from './AuthContext';
+import * as companyService from '../services/companyService';
 
 const CompanyContext = createContext(null);
-const STORAGE_KEY = 'invoice_app_companies';
-
-const DEFAULT_COMPANIES = [
-  {
-    id: 'comp-1',
-    name: 'Easy Invoice',
-    gstin: '29AABCU9603R1ZM',
-    website: 'www.invoicepro.com',
-    address: '100 Commerce Street\nNew York, NY 10001',
-    mobile: '+1 (555) 123-4567',
-    email: 'invoices@invoicepro.com',
-    logo: null,
-  },
-];
 
 export function CompanyProvider({ children }) {
+  const { user } = useAuth();
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadCompanies();
-  }, []);
-
-  useEffect(() => {
-    if (!loading) {
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(companies));
+    if (user) {
+      loadCompanies();
+    } else {
+      setCompanies([]);
+      setLoading(false);
     }
-  }, [companies, loading]);
+  }, [user]);
 
   const loadCompanies = async () => {
+    setLoading(true);
     try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setCompanies(JSON.parse(stored));
-      } else {
-        setCompanies(DEFAULT_COMPANIES);
-      }
+      const data = await companyService.getCompanies();
+      setCompanies(data);
     } catch (e) {
-      setCompanies(DEFAULT_COMPANIES);
+      setCompanies([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const addCompany = (company) => {
-    const id = `comp-${Date.now()}`;
-    const newCompany = { ...company, id };
-    setCompanies((prev) => [newCompany, ...prev]);
-    return id;
+  const addCompany = async (company) => {
+    try {
+      const newCompany = await companyService.createCompany(company);
+      setCompanies((prev) => [newCompany, ...prev]);
+      return newCompany.id;
+    } catch (e) {
+      throw e;
+    }
   };
 
-  const updateCompany = (id, updates) => {
-    setCompanies((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
-    );
+  const updateCompany = async (id, updates) => {
+    try {
+      const updated = await companyService.updateCompany(id, updates);
+      setCompanies((prev) =>
+        prev.map((c) => (c.id === id ? updated : c))
+      );
+    } catch (e) {
+      throw e;
+    }
   };
 
-  const deleteCompany = (id) => {
-    setCompanies((prev) => prev.filter((c) => c.id !== id));
+  const deleteCompany = async (id) => {
+    try {
+      await companyService.deleteCompany(id);
+      setCompanies((prev) => prev.filter((c) => c.id !== id));
+    } catch (e) {
+      throw e;
+    }
   };
 
   const getCompanyById = (id) => companies.find((c) => c.id === id);

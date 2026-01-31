@@ -15,9 +15,9 @@ import { FadeInView, SlideUpView, FadeInItem } from '../components/AnimatedView'
 import { PageLoader } from '../components/Loader.jsx';
 
 const STAT_COLORS = [
-  { bg: '#0d2818', accent: '#22c55e', label: 'Total Revenue' },
-  { bg: '#0f172a', accent: '#3b82f6', label: 'Paid Invoices' },
-  { bg: '#1c1917', accent: '#f59e0b', label: 'Pending' },
+  { bg: '#dcfce7', accent: '#16a34a', label: 'Total Revenue' },
+  { bg: '#dbeafe', accent: '#2563eb', label: 'Paid Invoices' },
+  { bg: '#fef3c7', accent: '#d97706', label: 'Pending' },
 ];
 
 const STATUS_STYLES = {
@@ -87,7 +87,7 @@ export default function DashboardScreen({ navigation }) {
         <SlideUpView delay={100} style={styles.statsContainer}>
           {stats.map((stat, index) => (
             <FadeInItem key={stat.label} index={index} style={styles.statCard}>
-              <View style={[styles.statInner, { backgroundColor: stat.bg, borderColor: theme.borderLight }]}>
+              <View style={[styles.statInner, { backgroundColor: stat.bg, borderColor: theme.border }]}>
                 <Text style={[styles.statValue, { color: stat.accent }]}>
                   {stat.value}
                 </Text>

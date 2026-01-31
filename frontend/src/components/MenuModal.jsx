@@ -19,10 +19,11 @@ const MENU_ITEMS = [
   { name: 'Create Invoice', screen: 'CreateInvoice', icon: '➕' },
   { name: 'Companies', screen: 'CompanyList', icon: '🏢' },
   { name: 'Create Company', screen: 'CreateCompany', icon: '➕' },
+  { name: 'Change Password', screen: 'ChangePassword', icon: '🔐' },
 ];
 
 export default function MenuModal({ navigationRef }) {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const { visible, closeMenu } = useMenu();
   const { theme } = useTheme();
   const [logoutVisible, setLogoutVisible] = useState(false);
@@ -56,8 +57,17 @@ export default function MenuModal({ navigationRef }) {
         <Pressable style={styles.overlay} onPress={closeMenu}>
           <Pressable style={[styles.menu, { backgroundColor: theme.menuBg }]} onPress={(e) => e.stopPropagation()}>
             <View style={[styles.header, { borderBottomColor: theme.border }]}>
-              <Text style={styles.logo}>📄</Text>
-              <Text style={[styles.title, { color: theme.accent }]}>Easy Invoice</Text>
+              <View style={[styles.avatarWrap, { backgroundColor: theme.accentMuted }]}>
+                <Text style={styles.avatarText}>
+                  {user?.name ? user.name.charAt(0).toUpperCase() : '?'}
+                </Text>
+              </View>
+              <Text style={[styles.userName, { color: theme.text }]} numberOfLines={1}>
+                {user?.name || 'User'}
+              </Text>
+              <Text style={[styles.userEmail, { color: theme.textSecondary }]} numberOfLines={1}>
+                {user?.email || ''}
+              </Text>
             </View>
             <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
               {MENU_ITEMS.map((item) => (
@@ -115,13 +125,26 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     marginBottom: 16,
   },
-  logo: {
-    fontSize: 36,
-    marginBottom: 8,
+  avatarWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
-  title: {
-    fontSize: 20,
+  avatarText: {
+    fontSize: 24,
     fontWeight: '700',
+    color: '#e94560',
+  },
+  userName: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  userEmail: {
+    fontSize: 14,
   },
   scroll: {
     flex: 1,

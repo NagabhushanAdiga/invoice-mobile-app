@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import Toast from 'react-native-toast-message';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, StyleSheet } from 'react-native';
@@ -18,6 +19,8 @@ import InvoiceDetailScreen from './src/screens/InvoiceDetailScreen.jsx';
 import CreateInvoiceScreen from './src/screens/CreateInvoiceScreen.jsx';
 import CompanyListScreen from './src/screens/CompanyListScreen.jsx';
 import CreateCompanyScreen from './src/screens/CreateCompanyScreen.jsx';
+import ChangePasswordScreen from './src/screens/ChangePasswordScreen.jsx';
+import { toastConfig } from './src/components/ToastConfig.jsx';
 
 const Stack = createNativeStackNavigator();
 
@@ -37,6 +40,7 @@ function MainStack() {
       <Stack.Screen name="CreateInvoice" component={CreateInvoiceScreen} />
       <Stack.Screen name="CompanyList" component={CompanyListScreen} />
       <Stack.Screen name="CreateCompany" component={CreateCompanyScreen} />
+      <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
     </Stack.Navigator>
   );
 }
@@ -90,7 +94,7 @@ function AppContent() {
           <MenuProvider>
             <NavigationContainer ref={navigationRef}>
               <AppNavigator navigationRef={navigationRef} />
-              <StatusBar style="light" />
+              <StatusBar style="dark" />
             </NavigationContainer>
           </MenuProvider>
         </InvoiceProvider>
@@ -102,7 +106,10 @@ function AppContent() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AppContent />
+      <>
+        <AppContent />
+        <Toast config={toastConfig} />
+      </>
     </ThemeProvider>
   );
 }
