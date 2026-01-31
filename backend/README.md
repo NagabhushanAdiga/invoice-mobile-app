@@ -37,6 +37,20 @@ Node.js + Express + MongoDB backend for the Invoice Mobile App.
 
 Server runs at `http://localhost:3000`.
 
+## Deploy to Vercel
+
+1. **Connect your repo** to Vercel and set **Root Directory** to `backend`.
+
+2. **Add Environment Variables** in Vercel Project Settings → Environment Variables (required):
+   - `MONGODB_URI` – Your MongoDB Atlas connection string
+   - `JWT_SECRET` – A strong random string for JWT signing
+
+3. **MongoDB Atlas**: In Atlas → Network Access, allow `0.0.0.0/0` so Vercel serverless can connect.
+
+4. Redeploy. Your API will be at `https://your-project.vercel.app/api/health`.
+
+> **Note:** The "Serverless Function has crashed" error usually means `MONGODB_URI` or `JWT_SECRET` is missing in Vercel.
+
 ## API Endpoints
 
 ### Auth

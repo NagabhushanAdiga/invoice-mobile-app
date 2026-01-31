@@ -8,8 +8,6 @@ const authRoutes = require('./routes/auth');
 const companyRoutes = require('./routes/companies');
 const invoiceRoutes = require('./routes/invoices');
 
-connectDB();
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -22,6 +20,10 @@ app.use('/api/invoices', invoiceRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Invoice API is running' });
+});
+
+app.get('/', (req, res) => {
+  res.redirect('/api/health');
 });
 
 app.use((req, res) => {
@@ -40,6 +42,16 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'Internal server error' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+// Connect DB and start server (local) or export for Vercel serverless
+const isVercel = process.env.VERCEL === '1';
+
+if (isVercel) {
+  connectDB().catch((err) => console.error('MongoDB connect error:', err));
+  module.exports = app;
+} else {
+  connectDB().then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  });
+}
