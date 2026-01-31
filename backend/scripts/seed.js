@@ -6,9 +6,9 @@
 
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const mongoose = require('mongoose');
-const User = require('../models/User');
-const Company = require('../models/Company');
-const Invoice = require('../models/Invoice');
+const User = require('../src/models/User');
+const Company = require('../src/models/Company');
+const Invoice = require('../src/models/Invoice');
 
 const DEMO_EMAIL = 'user@invoice.com';
 const DEMO_PASSWORD = 'password123';
